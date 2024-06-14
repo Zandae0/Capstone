@@ -16,6 +16,7 @@ const loadModel = async () => {
 const extractFrames = async (videoPath, outputDir) => {
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
+      .outputOptions('-vf', 'fps=1')
       .on('end', resolve)
       .on('error', reject)
       .save(`${outputDir}/frame%04d.png`);
@@ -49,19 +50,38 @@ const processFrame = async (framePath) => {
 
 exports.processVideo = async (videoPath) => {
   await loadModel();
+
   const outputDir = '/tmp/frames';
 
-  await fs.mkdir(outputDir, { recursive: true });
-  await extractFrames(videoPath, outputDir);
+  try {
+    await fs.mkdir(outputDir, { recursive: true });
+    await extractFrames(videoPath, outputDir);
 
-  const frames = await fs.readdir(outputDir);
-  const transcripts = [];
+    const frames = await fs.readdir(outputDir);
+    const transcripts = [];
 
-  for (const frame of frames) {
-    const framePath = path.join(outputDir, frame);
-    const transcript = await processFrame(framePath);
-    transcripts.push(transcript);
+    for (const frame of frames) {
+      const framePath = path.join(outputDir, frame);
+      const transcript = await processFrame(framePath);
+      transcripts.push(transcript);
+      await fs.unlink(framePath); // Menghapus frame setelah diproses
+    }
+
+    return transcripts.join('');
+  } catch (err) {
+    console.error('Error processing video:', err);
+    throw err; // Melemparkan error untuk ditangkap di lapisan yang lebih tinggi
+  } finally {
+    // Menghapus direktori sementara setelah selesai
+    try {
+      const files = await fs.readdir(outputDir);
+      for (const file of files) {
+        const filePath = path.join(outputDir, file);
+        await fs.unlink(filePath);
+      }
+      await fs.rmdir(outputDir);
+    } catch (err) {
+      console.error('Error cleaning up temporary directory:', err);
+    }
   }
-
-  return transcripts.join('');
 };
