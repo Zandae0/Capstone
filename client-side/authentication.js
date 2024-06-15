@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { DB, auth } = require('./config');
 const { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken } = require('firebase/auth');
-const { collection, doc, setDoc, getDoc, getDocs, getFirestore } = require("firebase/firestore");
+const { collection, doc, setDoc, getDocs} = require("firebase/firestore");
 
 // Sign in route
 router.post('/signin', async (req, res) => {
